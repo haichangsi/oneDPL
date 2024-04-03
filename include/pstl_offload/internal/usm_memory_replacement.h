@@ -145,8 +145,8 @@ __internal_aligned_alloc(std::size_t __size, std::size_t __alignment)
                                                               : __original_aligned_alloc(__alignment, __size);
 #else
         // can always use aligned allocation, not interop issue with free()
-        __res = __original_aligned_alloc(__size, (__not_use_explicit_alignment == __alignment) ? alignof(std::max_align_t)
-                                                                                               : __alignment);
+        __res = __original_aligned_alloc(
+            __size, (__not_use_explicit_alignment == __alignment) ? alignof(std::max_align_t) : __alignment);
 #endif
     }
 
