@@ -141,12 +141,12 @@ __internal_aligned_alloc(std::size_t __size, std::size_t __alignment)
 #if _WIN64
         // Under Windows, memory with explicitly set alignment must not be released by free() function,
         // but rather with _aligned_free(), so have to use malloc() for non-extended alignment allocations.
-        __res = __not_use_explicit_alignment == __alignment ? __original_malloc(__size)
-                                                            : __original_aligned_alloc(__alignment, __size);
+        __res = (__not_use_explicit_alignment == __alignment) ? __original_malloc(__size)
+                                                              : __original_aligned_alloc(__alignment, __size);
 #else
         // can always use aligned allocation, not interop issue with free()
-        __res = __original_aligned_alloc(__size, __not_use_explicit_alignment == __alignment ? alignof(std::max_align_t)
-                                                                                             : __alignment);
+        __res = __original_aligned_alloc(__size, (__not_use_explicit_alignment == __alignment) ? alignof(std::max_align_t)
+                                                                                               : __alignment);
 #endif
     }
 
@@ -322,9 +322,8 @@ inline void* __attribute__((always_inline)) __libc_realloc(void *__ptr, std::siz
 inline void* __attribute__((always_inline)) _aligned_malloc(std::size_t __size, std::size_t __alignment)
 {
     // _aligned_malloc should reject zero or not power of two alignments
-    if (!::__pstl_offload::__is_power_of_two(__alignment))
+    if (!::__pstl_offload::__verify_aligned_new_param(__alignment))
     {
-        errno = EINVAL;
         return nullptr;
     }
     return ::__pstl_offload::__errno_handling_internal_aligned_alloc(__size, __alignment);
@@ -332,10 +331,9 @@ inline void* __attribute__((always_inline)) _aligned_malloc(std::size_t __size, 
 
 inline void* __attribute__((always_inline)) _aligned_realloc(void* __ptr, std::size_t __size, std::size_t __alignment)
 {
-    // _aligned_realloc should reject zero or not power of two alignments
-    if (!::__pstl_offload::__is_power_of_two(__alignment))
+    // _aligned_realloc should reject zero or not power of two alignments, but not when it calls _aligned_free
+    if (__size && !::__pstl_offload::__verify_aligned_new_param(__alignment))
     {
-        errno = EINVAL;
         return nullptr;
     }
     return ::__pstl_offload::__internal_aligned_realloc(__ptr, __size, __alignment);

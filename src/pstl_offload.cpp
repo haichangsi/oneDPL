@@ -193,6 +193,7 @@ __internal_msize(void* __user_ptr)
     {
 #if _WIN64
         errno = EINVAL;
+        _invalid_parameter_noinfo();
         return -1;
 #else
         return 0;
@@ -221,6 +222,7 @@ __internal_aligned_msize(void* __user_ptr, std::size_t __alignment, std::size_t 
     if (__user_ptr == nullptr || !__is_power_of_two(__alignment))
     {
         errno = EINVAL;
+        _invalid_parameter_noinfo();
         return -1;
     }
 
