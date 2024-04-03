@@ -73,24 +73,12 @@ add_custom_target(run-onedpl-tests
     COMMENT "Build and run all oneDPL tests")
 
 macro(onedpl_construct_exec test_source_file _test_name switch_off_checked_iterators custom_define extra_test_label)
-    add_executable(${_test_name} EXCLUDE_FROM_ALL "${test_source_file}")
-    target_compile_definitions(${_test_name} PRIVATE _PSTL_TEST_SUCCESSFUL_KEYWORD=1)
-
-    if (NOT ${custom_define} STREQUAL "")
-        target_compile_definitions(${_test_name} PRIVATE ${custom_define})
-    endif()
-    if (MSVC)
-        target_compile_options(${_test_name} PRIVATE /bigobj)
-    endif()
-
     # Disable checked iterators on Windows for debug mode
     # For details please see
     #    https://learn.microsoft.com/en-us/cpp/standard-library/iterator-debug-level?view=msvc-170
     #    https://learn.microsoft.com/en-us/cpp/build/reference/md-mt-ld-use-run-time-library?view=msvc-170
     #    https://stackoverflow.com/questions/51494506/replacing-md-with-mt-in-cmake-is-not-possible-in-release-mode
     if (WIN32 AND ${_build_type_in_lower} STREQUAL "debug" AND ${switch_off_checked_iterators})
-        target_compile_definitions(${_test_name} PRIVATE _ITERATOR_DEBUG_LEVEL=0)
-        target_compile_options(${_test_name} PRIVATE "/MD$<$<CONFIG:Debug>:>")
         set(_use_release_in_debug 1)
     else()
         set(_use_release_in_debug 0)
@@ -99,6 +87,21 @@ macro(onedpl_construct_exec test_source_file _test_name switch_off_checked_itera
     if (NOT _ONEDPL_PSTL_OFFLOAD STREQUAL off AND _use_release_in_debug)
         # link with release runtime is not supported for debug PSTL offload while one is requested, skip
     else()
+        add_executable(${_test_name} EXCLUDE_FROM_ALL "${test_source_file}")
+        target_compile_definitions(${_test_name} PRIVATE _PSTL_TEST_SUCCESSFUL_KEYWORD=1)
+
+        if (NOT ${custom_define} STREQUAL "")
+            target_compile_definitions(${_test_name} PRIVATE ${custom_define})
+        endif()
+        if (MSVC)
+            target_compile_options(${_test_name} PRIVATE /bigobj)
+        endif()
+
+        if (_use_release_in_debug)
+            target_compile_definitions(${_test_name} PRIVATE _ITERATOR_DEBUG_LEVEL=0)
+            target_compile_options(${_test_name} PRIVATE "/MD$<$<CONFIG:Debug>:>")
+        endif()
+
         # oneDPL test harness may initialize a C++ iterator using iterator with different type
         # that may break code when using Intel(R) C++ Compiler Classic with -O3 flag on Linux
         if (CMAKE_SYSTEM_NAME MATCHES "Linux" AND CMAKE_CXX_COMPILER_ID STREQUAL Intel)
