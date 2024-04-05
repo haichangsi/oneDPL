@@ -1225,6 +1225,7 @@ class __find_policy_wrapper
 {
 };
 
+// TODO: Probably , it is better to use __pattern_parallel_find(__hetero_tag<_BackendTag>...) instead of this __parallel_find
 template <typename _ExecutionPolicy, typename _Iterator1, typename _Iterator2, typename _Brick, typename _IsFirst>
 _Iterator1
 __parallel_find(oneapi::dpl::__internal::__device_backend_tag __backend_tag, _ExecutionPolicy&& __exec,
@@ -1247,6 +1248,7 @@ __parallel_find(oneapi::dpl::__internal::__device_backend_tag __backend_tag, _Ex
 // Special overload for single sequence cases.
 // TODO: check if similar pattern may apply to other algorithms. If so, these overloads should be moved out of
 // backend code.
+// TODO: Probably , it is better to use __pattern_parallel_find(__hetero_tag<_BackendTag>...) instead of this __parallel_find
 template <typename _ExecutionPolicy, typename _Iterator, typename _Brick, typename _IsFirst>
 _Iterator
 __parallel_find(oneapi::dpl::__internal::__device_backend_tag __backend_tag, _ExecutionPolicy&& __exec,
