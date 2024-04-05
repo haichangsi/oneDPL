@@ -839,19 +839,14 @@ __pattern_parallel_find(__hetero_tag<_BackendTag> __tag, _ExecutionPolicy&& __ex
 
 template <typename _BackendTag, typename _ExecutionPolicy, typename _Iterator, typename _Pred>
 _Iterator
-__pattern_find_if(__hetero_tag<_BackendTag>, _ExecutionPolicy&& __exec, _Iterator __first, _Iterator __last,
+__pattern_find_if(__hetero_tag<_BackendTag> __tag, _ExecutionPolicy&& __exec, _Iterator __first, _Iterator __last,
                   _Pred __pred)
 {
     if (__first == __last)
         return __last;
 
-    using _Predicate = oneapi::dpl::unseq_backend::single_match_pred<_ExecutionPolicy, _Pred>;
-
-    return __par_backend_hetero::__parallel_find(                   // to __pattern_parallel_find ?
-        _BackendTag{}, ::std::forward<_ExecutionPolicy>(__exec),
-        __par_backend_hetero::make_iter_mode<__par_backend_hetero::access_mode::read>(__first),
-        __par_backend_hetero::make_iter_mode<__par_backend_hetero::access_mode::read>(__last), _Predicate{__pred},
-        /*_IsFirst*/ ::std::true_type{});
+    return __pattern_parallel_find(__tag, ::std::forward<_ExecutionPolicy>(__exec), __first, __last, __pred,
+                                   /*_IsFirst*/ ::std::true_type{});
 }
 
 //------------------------------------------------------------------------
