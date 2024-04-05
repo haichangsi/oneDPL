@@ -710,6 +710,130 @@ __pattern_equal(__hetero_tag<_BackendTag> __tag, _ExecutionPolicy&& __exec, _Ite
 }
 
 //------------------------------------------------------------------------
+// parallel_find
+//------------------------------------------------------------------------
+
+template <typename _Typle, typename _UnaryTransformOp>
+struct __find_if_unary_transform_op
+{
+    _UnaryTransformOp __transform_op;
+
+    template <typename Arg>
+    _Typle
+    operator()(const Arg& arg) const
+    {
+        return {__transform_op(::std::get<0>(arg)), ::std::get<1>(arg)};
+    }
+};
+
+template <typename _Typle, typename _IsFirst>
+struct __find_if_binary_reduce_op
+{
+    _Typle
+    operator()(const _Typle& op1, const _Typle& op2) const
+    {
+        if (::std::get<0>(op1) && ::std::get<0>(op2))
+        {
+            if constexpr (_IsFirst{})
+                return {true, ::std::min(::std::get<1>(op1), ::std::get<1>(op2))};
+            else
+                return {true, ::std::max(::std::get<1>(op1), ::std::get<1>(op2))};
+        }
+
+        return ::std::get<0>(op1) ? op1 : op2;
+    }
+};
+
+template <typename _BackendTag, typename _ExecutionPolicy, typename _ForwardIterator, typename _Tp,
+          typename _BinaryReduceOp, typename _UnaryTransformOp>
+_Tp
+__pattern_transform_reduce(__hetero_tag<_BackendTag>, _ExecutionPolicy&&, _ForwardIterator, _ForwardIterator, _Tp,
+                           _BinaryReduceOp, _UnaryTransformOp);
+
+template <typename _BackendTag, typename _ExecutionPolicy, typename _Iterator, typename _Pred, typename _IsFirst>
+_Iterator
+__pattern_parallel_find(__hetero_tag<_BackendTag> __tag, _ExecutionPolicy&& __exec, _Iterator __first, _Iterator __last,
+                        _Pred __pred, _IsFirst)
+{
+    using _difference_type = typename ::std::iterator_traits<_Iterator>::difference_type;
+
+    const _difference_type __n = __last - __first;
+    if (__n == 0)
+        return __last;
+
+    using _result_type = oneapi::dpl::__internal::tuple<bool, _difference_type>;
+
+    const auto __itBegin = oneapi::dpl::make_zip_iterator(__first, oneapi::dpl::counting_iterator{0});
+    const auto __itEnd = __itBegin + __n;
+
+    using _zipped_data_type = typename ::std::iterator_traits<decltype(__itBegin)>::value_type;
+    const auto __reduce_op = __find_if_binary_reduce_op<_zipped_data_type, _IsFirst>{};
+    const auto __transform_op = __find_if_unary_transform_op<_zipped_data_type, _Pred>{__pred};
+
+    constexpr _difference_type __max_portion_size = 1 << 20; // 1'048'576
+    const _difference_type __portion_size = ::std::min(__max_portion_size, __n);
+
+    // Find the first element that satisfies the predicate - iterate portions from beginning
+    if constexpr (_IsFirst::value)
+    {
+        for (auto __portion_begin = __itBegin; __portion_begin < __itEnd; __portion_begin += __portion_size)
+        {
+            auto __portion_end = ::std::min(__portion_begin + __portion_size, __itEnd);
+
+            const _result_type result = oneapi::dpl::__internal::__pattern_transform_reduce(
+                /* __dispatch_tag    */ __tag,
+                /* _ExecutionPolicy  */ __exec,
+                /* _ForwardIterator  */ __portion_begin,
+                /* _ForwardIterator  */ __portion_end,
+                /* _Tp __init        */ _result_type{false, __portion_end - __itBegin},
+                /* _BinaryReduceOp   */ __reduce_op,
+                /* _UnaryTransformOp */ __transform_op);
+
+            if (::std::get<0>(result))
+                return __first + ::std::get<1>(result);
+        }
+    }
+
+    // Find the last element that satisfies the predicate - iterate portions from ending
+    else
+    {
+        const auto __last_portion_size = __n % __portion_size;
+        const auto __portions_count = __n / __portion_size + (__last_portion_size != 0);
+
+        for (auto __portion_idx = 0; __portion_idx < __portions_count; ++__portion_idx)
+        {
+            const auto __current_portion_size = __portion_idx == 0 ? __last_portion_size : __portion_size;
+
+            // Avoid the first portion if their size is zero
+            if (__current_portion_size == 0 && __portion_idx == 0)
+                continue;
+            assert(__current_portion_size > 0);
+
+            const auto __portion_begin = __itBegin + __portion_size * (__portions_count - (__portion_idx + 1));
+            const auto __portion_end = __portion_begin + __current_portion_size;
+
+            assert(__portion_begin >= __itBegin);
+            assert(__portion_end <= __itEnd);
+            assert(__portion_begin < __portion_end);
+
+            const _result_type result = oneapi::dpl::__internal::__pattern_transform_reduce(
+                /* __dispatch_tag    */ __tag,
+                /* _ExecutionPolicy  */ __exec,
+                /* _ForwardIterator  */ __portion_begin,
+                /* _ForwardIterator  */ __portion_end,
+                /* _Tp __init        */ _result_type{false, __portion_end - __itBegin},
+                /* _BinaryReduceOp   */ __reduce_op,
+                /* _UnaryTransformOp */ __transform_op);
+
+            if (::std::get<0>(result))
+                return __first + ::std::get<1>(result);
+        }
+    }
+
+    return __last;
+}
+
+//------------------------------------------------------------------------
 // find_if
 //------------------------------------------------------------------------
 
