@@ -133,7 +133,8 @@ __internal_aligned_alloc(std::size_t __size, std::size_t __alignment)
 
     if (__device != nullptr)
     {
-        __res = __allocate_shared_for_device(__device, __size, __alignment ? __alignment : alignof(std::max_align_t));
+        __res = __allocate_shared_for_device(__device, __size,
+            (__not_use_explicit_alignment == __alignment) ? alignof(std::max_align_t) : __alignment);
     }
     else
     {
@@ -142,11 +143,11 @@ __internal_aligned_alloc(std::size_t __size, std::size_t __alignment)
         // Under Windows, memory with explicitly set alignment must not be released by free() function,
         // but rather with _aligned_free(), so have to use malloc() for non-extended alignment allocations.
         __res = (__not_use_explicit_alignment == __alignment) ? __original_malloc(__size)
-                                                              : __original_aligned_alloc(__alignment, __size);
+                                                              : __original_aligned_alloc(__size, __alignment);
 #else
         // can always use aligned allocation, not interop issue with free()
         __res = __original_aligned_alloc(
-            __size, (__not_use_explicit_alignment == __alignment) ? alignof(std::max_align_t) : __alignment);
+            (__not_use_explicit_alignment == __alignment) ? alignof(std::max_align_t) : __alignment, __size);
 #endif
     }
 
