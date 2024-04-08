@@ -133,8 +133,8 @@ __internal_aligned_alloc(std::size_t __size, std::size_t __alignment)
 
     if (__device != nullptr)
     {
-        __res = __allocate_shared_for_device(__device, __size,
-            (__not_use_explicit_alignment == __alignment) ? alignof(std::max_align_t) : __alignment);
+        __res = __allocate_shared_for_device(
+            __device, __size, (__not_use_explicit_alignment == __alignment) ? alignof(std::max_align_t) : __alignment);
     }
     else
     {
