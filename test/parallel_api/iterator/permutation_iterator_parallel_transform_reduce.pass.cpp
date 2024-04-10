@@ -43,24 +43,46 @@ DEFINE_TEST_PERM_IT(test_transform_reduce, PermItIndexTag)
             host_keys.update_data();
 
             test_through_permutation_iterator<Iterator1, Size, PermItIndexTag>{first1, n}(
-                [&](auto permItBegin, auto permItEnd)
+                [&](auto permItBegin, auto permItEnd, const char* index_type_str)
                 {
                     const auto testing_n = permItEnd - permItBegin;
 
-                    const auto result = dpl::transform_reduce(exec, permItBegin, permItEnd, TestValueType{},
+                    TestValueType result{};
+                    try{
+                        result = dpl::transform_reduce(exec, permItBegin, permItEnd, TestValueType{},
                                                               ::std::plus<TestValueType>(), ::std::negate<TestValueType>());
-                    wait_and_throw(exec);
+                        wait_and_throw(exec);
+                    }catch(const std::exception& exc)
+                    {
+                        std::stringstream str;
+                        str << "Exception occurred in transform_reduce (index: "<< index_type_str<<")";
+                        if (exc.what())
+                            str << " : " << exc.what();
 
-                    // Copy data back
+                        TestUtils::issue_error_message(str);
+                    }
+
                     std::vector<TestValueType> sourceData(testing_n);
-                    dpl::copy(exec, permItBegin, permItEnd, sourceData.begin());
-                    wait_and_throw(exec);
+                    try{
+                        // Copy data back
+                        dpl::copy(exec, permItBegin, permItEnd, sourceData.begin());
+                        wait_and_throw(exec);
+                    }catch(const std::exception& exc)
+                    {
+                        std::stringstream str;
+                        str << "Exception occurred in copy back (index: "<< index_type_str<<")";
+                        if (exc.what())
+                            str << " : " << exc.what();
 
+                        TestUtils::issue_error_message(str);
+                    }
                     const auto expected =
                         TestUtils::transform_reduce_serial(sourceData.begin(), sourceData.end(), TestValueType{},
                                                            ::std::plus<TestValueType>(),
                                                            ::std::negate<TestValueType>());
-                    EXPECT_EQ(expected, result, "Wrong result of dpl::transform_reduce");
+                    std::ostringstream msg;
+                    msg << "Wrong result of dpl::transform_reduce (index: "<< index_type_str<<")";
+                    EXPECT_EQ(expected, result, msg.str().c_str());
                 });
         }
     }

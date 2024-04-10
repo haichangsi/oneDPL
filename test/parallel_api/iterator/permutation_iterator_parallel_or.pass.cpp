@@ -46,20 +46,40 @@ DEFINE_TEST_PERM_IT(test_is_heap, PermItIndexTag)
                 host_keys.update_data();
 
                 test_through_permutation_iterator<Iterator1, Size, PermItIndexTag>{first1, n}(
-                    [&](auto permItBegin, auto permItEnd)
+                    [&](auto permItBegin, auto permItEnd, const char* index_type_str)
                     {
                         const auto testing_n = permItEnd - permItBegin;
+                        bool resultIsHeap = false;
+                        try{
+                             resultIsHeap = dpl::is_heap(exec, permItBegin, permItEnd);
+                            wait_and_throw(exec);
+                        }catch(const std::exception& exc)
+                        {
+                            std::stringstream str;
+                            str << "Exception occurred in is_heap (index: "<< index_type_str<<")";
+                            if (exc.what())
+                                str << " : " << exc.what();
 
-                        const auto resultIsHeap = dpl::is_heap(exec, permItBegin, permItEnd);
-                        wait_and_throw(exec);
-
-                        // Copy data back
+                            TestUtils::issue_error_message(str);
+                        }
                         std::vector<TestValueType> expected(testing_n);
-                        dpl::copy(exec, permItBegin, permItEnd, expected.begin());
-                        wait_and_throw(exec);
+                        try{
+                            // Copy data back
+                            dpl::copy(exec, permItBegin, permItEnd, expected.begin());
+                            wait_and_throw(exec);
+                        }catch(const std::exception& exc)
+                        {
+                            std::stringstream str;
+                            str << "Exception occurred in copy back (index: "<< index_type_str<<")";
+                            if (exc.what())
+                                str << " : " << exc.what();
 
+                            TestUtils::issue_error_message(str);
+                        }
                         const auto expectedIsHeap = std::is_heap(expected.begin(), expected.end());
-                        EXPECT_EQ(expectedIsHeap, resultIsHeap, "Wrong result of dpl::is_heap");
+                        std::ostringstream msg;
+                        msg << "Wrong result of dpl::is_heap (index: "<< index_type_str<<")";
+                        EXPECT_EQ(expectedIsHeap, resultIsHeap, msg.str().c_str());
                     });
             }
         }

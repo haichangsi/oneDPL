@@ -32,10 +32,12 @@ DEFINE_TEST_PERM_IT(test_partial_sort, PermItIndexTag)
     }
 
     template <typename TIterator>
-    void check_results(TIterator itBegin, TIterator itEnd)
+    void check_results(TIterator itBegin, TIterator itEnd, const char* index_type_str)
     {
         const auto result = std::is_sorted(itBegin, itEnd);
-        EXPECT_TRUE(result, "Wrong partial_sort data results");
+        std::ostringstream msg;
+        msg << "Wrong partial_sort data results (index: "<< index_type_str<<")";
+        EXPECT_TRUE(result, msg.str().c_str());
     }
 
     template <typename Policy, typename Iterator1, typename Size>
@@ -52,22 +54,41 @@ DEFINE_TEST_PERM_IT(test_partial_sort, PermItIndexTag)
             host_keys.update_data();
 
             test_through_permutation_iterator<Iterator1, Size, PermItIndexTag>{first1, n}(
-                [&](auto permItBegin, auto permItEnd)
+                [&](auto permItBegin, auto permItEnd, const char* index_type_str)
                 {
                     const auto testing_n = permItEnd - permItBegin;
 
                     for (::std::size_t p = 0; p < testing_n; p = p <= 16 ? p + 1 : ::std::size_t(31.415 * p))
                     {
-                        dpl::partial_sort(exec, permItBegin, permItBegin + p, permItEnd);
-                        wait_and_throw(exec);
+                        try{
+                            dpl::partial_sort(exec, permItBegin, permItBegin + p, permItEnd);
+                            wait_and_throw(exec);
+                        }catch(const std::exception& exc)
+                        {
+                            std::stringstream str;
+                            str << "Exception occurred in partial sort (index: "<< index_type_str<<")";
+                            if (exc.what())
+                                str << " : " << exc.what();
 
-                        // Copy data back
+                            TestUtils::issue_error_message(str);
+                        }
+
                         std::vector<TestValueType> partialSortResult(p);
-                        dpl::copy(exec, permItBegin, permItBegin + p, partialSortResult.begin());
-                        wait_and_throw(exec);
+                        try{
+                            // Copy data back
+                            dpl::copy(exec, permItBegin, permItBegin + p, partialSortResult.begin());
+                            wait_and_throw(exec);
+                        }catch(const std::exception& exc)
+                        {
+                            std::stringstream str;
+                            str << "Exception occurred in copy back (index: "<< index_type_str<<")";
+                            if (exc.what())
+                                str << " : " << exc.what();
 
+                            TestUtils::issue_error_message(str);
+                        }
                         // Check results
-                        check_results(partialSortResult.begin(), partialSortResult.end());
+                        check_results(partialSortResult.begin(), partialSortResult.end(), index_type_str);
                     }
                 });
         }

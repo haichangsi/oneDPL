@@ -44,7 +44,7 @@ DEFINE_TEST_PERM_IT(test_find, PermItIndexTag)
             host_keys.update_data();
 
             test_through_permutation_iterator<Iterator1, Size, PermItIndexTag>{first1, n}(
-                [&](auto permItBegin, auto permItEnd)
+                [&](auto permItBegin, auto permItEnd, const char* index_type_str)
                 {
                     const auto testing_n = permItEnd - permItBegin;
 
@@ -52,19 +52,54 @@ DEFINE_TEST_PERM_IT(test_find, PermItIndexTag)
                     {
                         // Get value to find: the second value
                         TestValueType valueToFind{};
-                        dpl::copy(exec, permItBegin + 1, permItBegin + 2, &valueToFind);
-                        wait_and_throw(exec);
+                        try{
+                            dpl::copy(exec, permItBegin + 1, permItBegin + 2, &valueToFind);
+                            wait_and_throw(exec);
+                        }catch(const std::exception& exc)
+                        {
+                            std::stringstream str;
+                            str << "Exception occurred in copy in (index: "<< index_type_str<<")";
+                            if (exc.what())
+                                str << " : " << exc.what();
 
-                        const auto result = dpl::find(exec, permItBegin, permItEnd, valueToFind);
-                        wait_and_throw(exec);
+                            TestUtils::issue_error_message(str);
+                        }
 
-                        EXPECT_TRUE(result != permItEnd, "Wrong result of dpl::find");
+                        auto result = permItEnd;
+                        try{
+                            result = dpl::find(exec, permItBegin, permItEnd, valueToFind);
+                            wait_and_throw(exec);
+                        }catch(const std::exception& exc)
+                        {
+                            std::stringstream str;
+                            str << "Exception occurred in find (index: "<< index_type_str<<")";
+                            if (exc.what())
+                                str << " : " << exc.what();
+
+                            TestUtils::issue_error_message(str);
+                        }
+                        std::ostringstream msg;
+                        msg << "Wrong result of dpl::find (index: "<< index_type_str<<")";
+                        EXPECT_TRUE(result != permItEnd, msg.str().c_str());
 
                         // Copy data back
                         TestValueType foundedVal{};
-                        dpl::copy(exec, result, result + 1, &foundedVal);
-                        wait_and_throw(exec);
-                        EXPECT_EQ(foundedVal, valueToFind, "Incorrect value was found in dpl::find");
+                        try{
+                            dpl::copy(exec, result, result + 1, &foundedVal);
+                            wait_and_throw(exec);
+                        }catch(const std::exception& exc)
+                        {
+                            std::stringstream str;
+                            str << "Exception occurred in copy back (index: "<< index_type_str<<")";
+                            if (exc.what())
+                                str << " : " << exc.what();
+
+                            TestUtils::issue_error_message(str);
+                        }
+
+                        std::ostringstream incorrect_value_msg;
+                        incorrect_value_msg << "Incorrect value was found in dpl::find (index: "<< index_type_str<<")";
+                        EXPECT_EQ(foundedVal, valueToFind, incorrect_value_msg.str().c_str());
                     }
                 });
         }

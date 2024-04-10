@@ -41,7 +41,7 @@ DEFINE_TEST_PERM_IT(test_remove_if, PermItIndexTag)
             const auto host_keys_ptr = host_keys.get();
 
             test_through_permutation_iterator<Iterator1, Size, PermItIndexTag>{first1, n}(
-                [&](auto permItBegin, auto permItEnd)
+                [&](auto permItBegin, auto permItEnd, const char* index_type_str)
                 {
                     const auto testing_n = permItEnd - permItBegin;
 
@@ -49,31 +49,63 @@ DEFINE_TEST_PERM_IT(test_remove_if, PermItIndexTag)
                     generate_data(host_keys_ptr, host_keys_ptr + n, n);
                     host_keys.update_data();
 
-                    // Copy source data back
                     std::vector<TestValueType> sourceData(testing_n);
-                    dpl::copy(exec, permItBegin, permItEnd, sourceData.begin());
-                    wait_and_throw(exec);
+                    try{
+                        // Copy source data back
+                        dpl::copy(exec, permItBegin, permItEnd, sourceData.begin());
+                        wait_and_throw(exec);
+                    }catch(const std::exception& exc)
+                    {
+                        std::stringstream str;
+                        str << "Exception occurred in copy back (index: "<< index_type_str<<")";
+                        if (exc.what())
+                            str << " : " << exc.what();
 
+                        TestUtils::issue_error_message(str);
+                    }
                     const auto op = [](TestValueType val) { return val > 0; };
 
-                    auto itEndNewRes = dpl::remove_if(exec, permItBegin, permItEnd, op);
-                    wait_and_throw(exec);
+                    auto itEndNewRes = permItEnd;
+                    try{
+                        itEndNewRes = dpl::remove_if(exec, permItBegin, permItEnd, op);
+                        wait_and_throw(exec);
+                    }catch(const std::exception& exc)
+                    {
+                        std::stringstream str;
+                        str << "Exception occurred in remove_if (index: "<< index_type_str<<")";
+                        if (exc.what())
+                            str << " : " << exc.what();
 
+                        TestUtils::issue_error_message(str);
+                    }
                     const auto newSizeResult = itEndNewRes - permItBegin;
 
-                    // Copy modified data back
                     std::vector<TestValueType> resultRemoveIf(newSizeResult);
-                    dpl::copy(exec, permItBegin, itEndNewRes, resultRemoveIf.begin());
-                    wait_and_throw(exec);
+                    try{
+                        // Copy modified data back
+                        dpl::copy(exec, permItBegin, itEndNewRes, resultRemoveIf.begin());
+                        wait_and_throw(exec);
+                    }catch(const std::exception& exc)
+                    {
+                        std::stringstream str;
+                        str << "Exception occurred in copy back (index: "<< index_type_str<<")";
+                        if (exc.what())
+                            str << " : " << exc.what();
 
+                        TestUtils::issue_error_message(str);
+                    }
                     // Eval expected result
                     auto expectedRemoveIf = sourceData;
                     auto itEndNewExpected = ::std::remove_if(expectedRemoveIf.begin(), expectedRemoveIf.end(), op);
                     const auto newSizeExpected = itEndNewExpected - expectedRemoveIf.begin();
 
                     // Check results
-                    EXPECT_EQ(newSizeExpected, newSizeResult, "Wrong result size after dpl::remove_if");
-                    EXPECT_EQ_N(expectedRemoveIf.begin(), resultRemoveIf.begin(), newSizeExpected, "Wrong result after dpl::remove_if");
+                    std::ostringstream msg;
+                    msg << "Wrong result size after dpl::remove_if (index: "<< index_type_str<<")";
+                    EXPECT_EQ(newSizeExpected, newSizeResult, msg.str().c_str());
+                    std::ostringstream msg_result;
+                    msg_result << "Wrong result after dpl::remove_if (index: "<< index_type_str<<")";
+                    EXPECT_EQ_N(expectedRemoveIf.begin(), resultRemoveIf.begin(), newSizeExpected, msg_result.str().c_str());
                 });
         }
     }

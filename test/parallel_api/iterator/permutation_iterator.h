@@ -107,7 +107,7 @@ struct test_through_permutation_iterator<TSourceIterator, TSourceDataSize, perm_
         auto permItBegin = dpl::make_permutation_iterator(data.itSource, indexes_begin);
         auto permItEnd = permItBegin + data.src_data_size;
 
-        op(permItBegin, permItEnd);
+        op(permItBegin, permItEnd, "counting iter");
     }
 };
 
@@ -138,7 +138,7 @@ struct test_through_permutation_iterator<TSourceIterator, TSourceDataSize, perm_
             auto permItBegin = dpl::make_permutation_iterator(data.itSource, indexes.begin());
             auto permItEnd = permItBegin + indexes.size();
 
-            op(permItBegin, permItEnd);
+            op(permItBegin, permItEnd, "host iter");
         }
     }
 };
@@ -180,7 +180,7 @@ struct test_through_permutation_iterator<TSourceIterator, TSourceDataSize, perm_
             auto permItBegin = dpl::make_permutation_iterator(data.itSource, itIndexStart);
             auto permItEnd = permItBegin + indexes.size();
 
-            op(permItBegin, permItEnd);
+            op(permItBegin, permItEnd, "usm_shared");
         }
     }
 };
@@ -218,7 +218,7 @@ struct test_through_permutation_iterator<TSourceIterator, TSourceDataSize, perm_
         auto permItBegin = dpl::make_permutation_iterator(data.itSource, itTransformBegin);
         auto permItEnd = permItBegin + data.src_data_size;
 
-        op(permItBegin, permItEnd);
+        op(permItBegin, permItEnd, "transform_iterator");
     }
 };
 
@@ -240,7 +240,7 @@ struct test_through_permutation_iterator<TSourceIterator, TSourceDataSize, perm_
         auto permItBegin = dpl::make_permutation_iterator(data.itSource, kDefaultIndexStepOp);
         auto permItEnd = permItBegin + kDefaultIndexStepOp.eval_items_count(data.src_data_size);
 
-        op(permItBegin, permItEnd);
+        op(permItBegin, permItEnd, "callable obj");
     }
 };
 

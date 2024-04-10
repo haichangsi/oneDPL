@@ -59,7 +59,7 @@ DEFINE_TEST_PERM_IT(test_merge, PermItIndexTag)
             assert(::std::distance(first3, last3) >= ::std::distance(first1, last1) + ::std::distance(first2, last2));
 
             test_through_permutation_iterator<Iterator1, Size, PermItIndexTag>{first1, n}(
-                [&](auto permItBegin1, auto permItEnd1)
+                [&](auto permItBegin1, auto permItEnd1, const char* index_type_str)
                 {
                     const auto testing_n1 = permItEnd1 - permItBegin1;
 
@@ -73,33 +73,70 @@ DEFINE_TEST_PERM_IT(test_merge, PermItIndexTag)
                     wait_and_throw(exec1);
 
                     test_through_permutation_iterator<Iterator2, Size, PermItIndexTag>{first2, n}(
-                        [&](auto permItBegin2, auto permItEnd2)
+                        [&](auto permItBegin2, auto permItEnd2, const char* index_type_str)
                         {
                             const auto testing_n2 = permItEnd2 - permItBegin2;
 
                             //ensure list is sorted (not necessarily true after permutation)
-                            dpl::sort(exec2, permItBegin2, permItEnd2);
-                            wait_and_throw(exec2);
+                            try{
+                                dpl::sort(exec2, permItBegin2, permItEnd2);
+                                wait_and_throw(exec2);
+                            }catch(const std::exception& exc)
+                            {
+                                std::stringstream str;
+                                str << "Exception occurred in pre-sort (index: "<< index_type_str<<")";
+                                if (exc.what())
+                                    str << " : " << exc.what();
 
-                            const auto resultEnd = dpl::merge(exec, permItBegin1, permItEnd1, permItBegin2, permItEnd2, first3);
-                            wait_and_throw(exec);
+                                TestUtils::issue_error_message(str);
+                            }
+
+
+                            Iterator3 resultEnd = first3;
+                            try
+                            {
+                                resultEnd = dpl::merge(exec, permItBegin1, permItEnd1, permItBegin2, permItEnd2, first3);
+                                wait_and_throw(exec);
+                            }catch(const std::exception& exc)
+                            {
+                                std::stringstream str;
+                                str << "Exception occurred in merge (index: "<< index_type_str<<")";
+                                if (exc.what())
+                                    str << " : " << exc.what();
+
+                                TestUtils::issue_error_message(str);
+                            }
                             const auto resultSize = resultEnd - first3;
 
-                            // Copy data back
                             std::vector<TestValueType> srcData2(testing_n2);
-                            dpl::copy(exec2, permItBegin2, permItEnd2, srcData2.begin());
-                            wait_and_throw(exec2);
-
                             std::vector<TestValueType> mergedDataResult(resultSize);
-                            dpl::copy(exec3, first3, resultEnd, mergedDataResult.begin());
-                            wait_and_throw(exec3);
+                            try{
+                                // Copy data back
+                                dpl::copy(exec2, permItBegin2, permItEnd2, srcData2.begin());
+                                wait_and_throw(exec2);
 
+                                dpl::copy(exec3, first3, resultEnd, mergedDataResult.begin());
+                                wait_and_throw(exec3);
+                            }catch(const std::exception& exc)
+                            {
+                                std::stringstream str;
+                                str << "Exception occurred in copy back (index: "<< index_type_str<<")";
+                                if (exc.what())
+                                    str << " : " << exc.what();
+
+                                TestUtils::issue_error_message(str);
+                            }
                             // Check results
                             std::vector<TestValueType> mergedDataExpected(testing_n1 + testing_n2);
                             auto expectedEnd = std::merge(srcData1.begin(), srcData1.end(), srcData2.begin(), srcData2.end(), mergedDataExpected.begin());
                             const auto expectedSize = expectedEnd - mergedDataExpected.begin();
-                            EXPECT_EQ(expectedSize, resultSize, "Wrong size from dpl::merge");
-                            EXPECT_EQ_N(mergedDataExpected.begin(), mergedDataResult.begin(), expectedSize, "Wrong result of dpl::merge");
+                            
+                            std::ostringstream msg;
+                            msg << "Wrong size from dpl::merge (index: "<< index_type_str<<")";
+                            EXPECT_EQ(expectedSize, resultSize, msg.str().c_str());
+                            std::ostringstream incorrect_value_msg;
+                            incorrect_value_msg << "Wrong result of dpl::merge (index: "<< index_type_str<<")";
+                            EXPECT_EQ_N(mergedDataExpected.begin(), mergedDataResult.begin(), expectedSize, incorrect_value_msg.str().c_str());
                         });
                 });
         }
