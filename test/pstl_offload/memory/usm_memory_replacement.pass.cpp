@@ -157,18 +157,16 @@ int main() {
         EXPECT_TRUE(sycl::get_pointer_type(ptr, memory_context) == sycl::usm::alloc::shared, "Wrong pointer type while allocating with __libc_memalign");
         free(ptr);
     }
+#endif // __linux__
     {
         void* ptr = malloc(size);
+#if __linux__
         EXPECT_TRUE(malloc_usable_size(ptr) >= size, "Incorrect return value of malloc_usable_size");
-        free(ptr);
-    }
-#elif _WIN64
-    {
-        void* ptr = malloc(size);
+ #elif _WIN64
         EXPECT_TRUE(_msize(ptr) >= size, "Incorrect return value of _msize");
+#endif // _WIN64
         free(ptr);
     }
-#endif // _WIN64
 
     test_new(size);
     test_new(size, std::align_val_t(alignment));

@@ -216,6 +216,28 @@ __internal_msize(void* __user_ptr)
 
 #if _WIN64
 
+#if _DEBUG
+
+static void
+__internal_free_dbg(void* __user_ptr, int __type)
+{
+    if (__user_ptr != nullptr)
+    {
+        __block_header* __header = static_cast<__block_header*>(__user_ptr) - 1;
+
+        if (__same_memory_page(__user_ptr, __header) && __header->_M_uniq_const == __uniq_type_const)
+        {
+            __free_usm_pointer(__header);
+        }
+        else
+        {
+            __original_free_dbg_ptr(__user_ptr, __type);
+        }
+    }
+}
+
+#endif // _DEBUG
+
 static std::size_t
 __internal_aligned_msize(void* __user_ptr, std::size_t __alignment, std::size_t __offset)
 {
@@ -245,28 +267,6 @@ __internal_aligned_free(void* __user_ptr)
 {
     __internal_free_param(__user_ptr, __original_aligned_free_ptr);
 }
-
-#if _DEBUG
-
-static void
-__internal_free_dbg(void* __user_ptr, int __type)
-{
-    if (__user_ptr != nullptr)
-    {
-        __block_header* __header = static_cast<__block_header*>(__user_ptr) - 1;
-
-        if (__same_memory_page(__user_ptr, __header) && __header->_M_uniq_const == __uniq_type_const)
-        {
-            __free_usm_pointer(__header);
-        }
-        else
-        {
-            __original_free_dbg_ptr(__user_ptr, __type);
-        }
-    }
-}
-
-#endif // _DEBUG
 
 void*
 __original_malloc(std::size_t size)
@@ -300,19 +300,18 @@ __internal_expand(void* /*__user_ptr*/, std::size_t /*__size*/)
 }
 
 
-struct __system_info
-{
-    SYSTEM_INFO _M_si;
-    __system_info()
-    {
-        GetSystemInfo(&_M_si);
-    }
-};
-
 std::size_t
 __get_page_size()
 {
-    static __system_info __info;
+
+    static struct __system_info
+    {
+        SYSTEM_INFO _M_si;
+        __system_info()
+        {
+            GetSystemInfo(&_M_si);
+        }
+    } __info;
 
     return __info._M_si.dwPageSize;
 }
