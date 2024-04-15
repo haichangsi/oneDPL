@@ -24,6 +24,14 @@
 #ifndef _ONEDPL_SYCL_TRAITS_H
 #define _ONEDPL_SYCL_TRAITS_H
 
+namespace {
+template <typename... Ts>
+struct __types_to_check
+{
+};
+
+}
+
 #if __INTEL_LLVM_COMPILER && (__INTEL_LLVM_COMPILER < 20240100)
 
 #    define _ONEDPL_DEVICE_COPYABLE(TYPE)                                                                              \
@@ -33,6 +41,14 @@
         {                                                                                                              \
         };
 
+#    define _ONEDPL_DEVICE_COPYABLE_CHECK_SUBSET(TYPE, FULL_ARGS, DEPENDENTS)                                \
+        template <FULL_ARGS>                                                                                      \
+        struct sycl::is_device_copyable<TYPE<FULL_ARGS>, ::std::enable_if_t<!std::is_trivially_copyable_v<TYPE<FULL_ARGS>>>>   \
+            : sycl::is_device_copyable<__types_to_check<DEPENDENTS>                                                      \
+        {                                                                                                              \
+        };
+
+
 #else
 
 #    define _ONEDPL_DEVICE_COPYABLE(TYPE)                                                                              \
@@ -41,7 +57,18 @@
         {                                                                                                              \
         };
 
+#    define _ONEDPL_DEVICE_COPYABLE_CHECK_SUBSET(TYPE, FULL_ARGS, DEPENDENTS)                                                              \
+        template <FULL_ARGS>                                                                                         \
+        struct sycl::is_device_copyable<TYPE<FULL_ARGS>> : sycl::is_device_copyable<__types_to_check<DEPENDENTS>    \
+        {                                                                                                              \
+        };
+
 #endif
+
+
+
+_ONEDPL_DEVICE_COPYABLE(__types_to_check)
+
 
 _ONEDPL_DEVICE_COPYABLE(oneapi::dpl::__internal::__not_pred)
 _ONEDPL_DEVICE_COPYABLE(oneapi::dpl::__internal::__reorder_pred)
@@ -88,8 +115,9 @@ struct __brick_fill_n;
 
 _ONEDPL_DEVICE_COPYABLE(oneapi::dpl::__internal::fill_functor)
 _ONEDPL_DEVICE_COPYABLE(oneapi::dpl::__internal::generate_functor)
-_ONEDPL_DEVICE_COPYABLE(oneapi::dpl::__internal::__brick_fill)
-_ONEDPL_DEVICE_COPYABLE(oneapi::dpl::__internal::__brick_fill_n)
+
+_ONEDPL_DEVICE_COPYABLE_CHECK_SUBSET(oneapi::dpl::__internal::__brick_fill, "_Tag, _ExecutionPolicy, _Tp", "_Tp")
+_ONEDPL_DEVICE_COPYABLE_CHECK_SUBSET(oneapi::dpl::__internal::__brick_fill_n, "_Tag, _ExecutionPolicy, _Tp", "_Tp")
 _ONEDPL_DEVICE_COPYABLE(oneapi::dpl::__internal::__search_n_unary_predicate)
 _ONEDPL_DEVICE_COPYABLE(oneapi::dpl::__internal::__is_heap_check)
 _ONEDPL_DEVICE_COPYABLE(oneapi::dpl::__internal::equal_predicate)
@@ -160,6 +188,7 @@ template <typename _BinaryOperator, typename _Size>
 struct __brick_reduce_idx;
 
 } // namespace oneapi::dpl::unseq_backend
+
 
 _ONEDPL_DEVICE_COPYABLE(oneapi::dpl::unseq_backend::walk_n)
 _ONEDPL_DEVICE_COPYABLE(oneapi::dpl::unseq_backend::walk_adjacent_difference)
