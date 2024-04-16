@@ -147,7 +147,7 @@ __realloc_real_pointer(void* __user_ptr, std::size_t __new_size)
 {
     assert(__user_ptr != nullptr);
 
-    if (!__new_size)
+    if (__new_size == 0)
     {
         free(__user_ptr);
         return nullptr;
@@ -204,7 +204,7 @@ __aligned_realloc_real_pointer(void* __user_ptr, std::size_t __new_size, std::si
 {
     assert(__user_ptr != nullptr);
 
-    if (!__new_size)
+    if (__new_size == 0)
     {
         _aligned_free(__user_ptr);
         return nullptr;

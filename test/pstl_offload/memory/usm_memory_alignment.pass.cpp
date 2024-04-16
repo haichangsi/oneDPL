@@ -42,7 +42,7 @@ void test_alignment_allocation(AllocatingFunction allocate, DeallocatingFunction
 
         for (std::size_t size : sizes) {
             void* ptr = allocate(size, alignment);
-            EXPECT_TRUE(ptr, "nullptr returned by allocation");
+            EXPECT_TRUE(ptr != nullptr, "nullptr returned by allocation");
             EXPECT_TRUE(std::uintptr_t(ptr) % alignment == 0, "The returned pointer is not properly aligned");
             deallocate(ptr, size, alignment);
         }

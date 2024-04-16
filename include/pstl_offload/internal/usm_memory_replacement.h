@@ -36,7 +36,7 @@ namespace __pstl_offload
 // Under Windows, we must not use functions with explicit alignment for malloc replacement, as
 // an allocated memory would be released by free() replacement, that has no alignment argument.
 // Mark such allocations with special alignment. Use 0, as this is not valid alignment.
-static constexpr std::size_t __not_use_explicit_alignment = 0;
+static constexpr std::size_t __ignore_alignment = 0;
 
 static std::atomic<sycl::device*> __active_device = nullptr;
 
@@ -134,7 +134,7 @@ __internal_aligned_alloc(std::size_t __size, std::size_t __alignment)
     if (__device != nullptr)
     {
         __res = __allocate_shared_for_device(
-            __device, __size, (__not_use_explicit_alignment == __alignment) ? alignof(std::max_align_t) : __alignment);
+            __device, __size, (__ignore_alignment == __alignment) ? alignof(std::max_align_t) : __alignment);
     }
     else
     {
@@ -142,12 +142,12 @@ __internal_aligned_alloc(std::size_t __size, std::size_t __alignment)
 #if _WIN64
         // Under Windows, memory with explicitly set alignment must not be released by free() function,
         // but rather with _aligned_free(), so have to use malloc() for non-extended alignment allocations.
-        __res = (__not_use_explicit_alignment == __alignment) ? __original_malloc(__size)
+        __res = (__ignore_alignment == __alignment) ? __original_malloc(__size)
                                                               : __original_aligned_alloc(__size, __alignment);
 #else
         // can always use aligned allocation, not interop issue with free()
         __res = __original_aligned_alloc(
-            (__not_use_explicit_alignment == __alignment) ? alignof(std::max_align_t) : __alignment, __size);
+            (__ignore_alignment == __alignment) ? alignof(std::max_align_t) : __alignment, __size);
 #endif
     }
 
@@ -227,7 +227,7 @@ extern "C"
 inline void* __attribute__((always_inline)) malloc(std::size_t __size)
 {
     return ::__pstl_offload::__errno_handling_internal_aligned_alloc(__size,
-                                                                     __pstl_offload::__not_use_explicit_alignment);
+                                                                     __pstl_offload::__ignore_alignment);
 }
 
 inline void* __attribute__((always_inline)) calloc(std::size_t __num, std::size_t __size)
@@ -247,7 +247,7 @@ inline void* __attribute__((always_inline)) calloc(std::size_t __num, std::size_
     else
     {
         __res = ::__pstl_offload::__errno_handling_internal_aligned_alloc(__allocate_size,
-                                                                          __pstl_offload::__not_use_explicit_alignment);
+                                                                          __pstl_offload::__ignore_alignment);
     }
 
     return __res ? std::memset(__res, 0, __allocate_size) : nullptr;
@@ -350,26 +350,26 @@ inline void* __attribute__((always_inline)) _aligned_realloc(void* __ptr, std::s
 inline void* __attribute__((always_inline))
 operator new(std::size_t __size)
 {
-    return ::__pstl_offload::__internal_operator_new(__size, __pstl_offload::__not_use_explicit_alignment);
+    return ::__pstl_offload::__internal_operator_new(__size, __pstl_offload::__ignore_alignment);
 }
 
 inline void* __attribute__((always_inline))
 operator new[](std::size_t __size)
 {
-    return ::__pstl_offload::__internal_operator_new(__size, __pstl_offload::__not_use_explicit_alignment);
+    return ::__pstl_offload::__internal_operator_new(__size, __pstl_offload::__ignore_alignment);
 }
 
 inline void* __attribute__((always_inline))
 operator new(std::size_t __size, const std::nothrow_t&) noexcept
 {
-    return ::__pstl_offload::__internal_operator_new(__size, __pstl_offload::__not_use_explicit_alignment,
+    return ::__pstl_offload::__internal_operator_new(__size, __pstl_offload::__ignore_alignment,
                                                      std::nothrow);
 }
 
 inline void* __attribute__((always_inline))
 operator new[](std::size_t __size, const std::nothrow_t&) noexcept
 {
-    return ::__pstl_offload::__internal_operator_new(__size, __pstl_offload::__not_use_explicit_alignment,
+    return ::__pstl_offload::__internal_operator_new(__size, __pstl_offload::__ignore_alignment,
                                                      std::nothrow);
 }
 

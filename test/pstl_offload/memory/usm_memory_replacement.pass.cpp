@@ -96,7 +96,7 @@ int main() {
         // According to SUS, "If size is 0, either a null pointer or a unique pointer that can be
         // successfully passed to free() is returned.", but our implementation must return nullptr.
         ptr = realloc(ptr, 0);
-        EXPECT_TRUE(!ptr , "Non-null returned while releasing memory with realloc");
+        EXPECT_TRUE(ptr == nullptr , "Non-null returned while releasing memory with realloc");
     }
 #if __linux__
     {

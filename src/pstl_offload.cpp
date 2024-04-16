@@ -299,11 +299,9 @@ __internal_expand(void* /*__user_ptr*/, std::size_t /*__size*/)
     return nullptr;
 }
 
-
 std::size_t
 __get_page_size()
 {
-
     static struct __system_info
     {
         SYSTEM_INFO _M_si;
@@ -501,7 +499,7 @@ extern "C" BOOL WINAPI DllMain(HINSTANCE hInst, DWORD callReason, LPVOID reserve
 {
     BOOL ret = TRUE;
 
-    if (callReason==DLL_PROCESS_ATTACH && reserved && hInst)
+    if (callReason == DLL_PROCESS_ATTACH && reserved && hInst)
     {
         ret = __pstl_offload::__do_functions_replacement() ? TRUE : FALSE;
     }
