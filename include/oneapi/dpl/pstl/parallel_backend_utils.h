@@ -28,6 +28,63 @@ namespace dpl
 {
 namespace __utils
 {
+//------------------------------------------------------------------------
+// Uninitialized / initialized copy / move for trivial / non-trivial types
+//------------------------------------------------------------------------
+
+// struct __op_smart_assign - helper struct for uninitialized/initialized copy/move operations.
+// It can be used to perform copy/move operations for trivial and non-trivial types.
+template <typename _ValueType, typename std::enable_if_t<std::is_trivial_v<_ValueType>>>
+struct __op_smart_assign
+{
+    // Uninitialized copy
+    /**
+     * @param _ValueType& __value_to - dest value
+     * @param const _ValueType& __value_from - source value
+     */
+    inline void
+    operator()(_ValueType& __value_to, const _ValueType& __value_from) const
+    {
+        __value_to = __value_from;
+    }
+
+    // Uninitialized move
+    /**
+     * @param _ValueType& __value_to - dest value
+     * @param _ValueType&& __value_from - source value
+     */
+    inline void
+    operator()(_ValueType& __value_to, _ValueType&& __value_from) const
+    {
+        __value_to = std::move(std::forward<_ValueType>(__value_from));
+    }
+};
+
+template <typename _ValueType, typename std::enable_if_t<!std::is_trivial_v<_ValueType>>>
+struct __op_smart_assign
+{
+    // Copy with placement new (initialized copy)
+    /**
+     * @param _ValueType& __value_to - dest value
+     * @param const _ValueType& __value_from - source value
+     */
+    inline void
+    operator()(_ValueType& __value_to, const _ValueType& __value_from) const
+    {
+        ::new (std::addressof(__value_to)) __ValueType(__value_from);
+    }
+
+    // Move with placement new (initialized move)
+    /**
+     * @param _ValueType& __value_to - dest value
+     * @param _ValueType&& __value_from - source value
+     */
+    inline void
+    operator()(_ValueType& __value_to, _ValueType& __value_from) const
+    {
+        ::new (std::addressof(__value_to)) __ValueType(std::move(std::forward<_ValueType>(__value_from)));
+    }
+};
 
 //------------------------------------------------------------------------
 // raw buffer (with specified _TAllocator)
