@@ -753,10 +753,7 @@ class __merge_func
         void
         operator()(Iterator1 __x, Iterator2 __z)
         {
-            if constexpr (std::is_trivial_v<_ValueType>)
-                *__z = std::move(*__x);
-            else
-                ::new (std::addressof(*__z)) _ValueType(std::move(*__x));
+            oneapi::dpl::__utils::__op_smart_assign{}(*__z, std::move(*__x));
         }
     };
 

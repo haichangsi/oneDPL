@@ -21,6 +21,7 @@
 
 #include "memory_fwd.h"
 #include "unseq_backend_simd.h"
+#include "parallel_backend_utils.h"
 
 namespace oneapi
 {
@@ -40,12 +41,8 @@ __brick_uninitialized_move(_ForwardIterator __first, _ForwardIterator __last, _O
 {
     using _ValueType = typename ::std::iterator_traits<_OutputIterator>::value_type;
     for (; __first != __last; ++__first, ++__result)
-    {
-        if constexpr (std::is_trivial_v<_ValueType>)
-            *__result = std::move(*__first);
-        else
-            ::new (std::addressof(*__result)) _ValueType(std::move(*__first));
-    }
+        oneapi::dpl::__utils::__op_smart_assign{}(*__result, std::move(*__first));
+
     return __result;
 }
 
@@ -58,12 +55,10 @@ __brick_uninitialized_move(_RandomAccessIterator __first, _RandomAccessIterator 
     using _ReferenceType1 = typename ::std::iterator_traits<_RandomAccessIterator>::reference;
     using _ReferenceType2 = typename ::std::iterator_traits<_OutputIterator>::reference;
 
-    return __unseq_backend::__simd_walk_2(__first, __last - __first, __result,
+    return __unseq_backend::__simd_walk_2(
+        __first, __last - __first, __result,
                                           [](_ReferenceType1 __x, _ReferenceType2 __y) {
-                                              if constexpr (std::is_trivial_v<__ValueType>)
-                                                  __y = std::move(__x);
-                                              else
-                                                  ::new (std::addressof(__y)) __ValueType(std::move(__x));
+                                              oneapi::dpl::__utils::__op_smart_assign{}(__y, std::move(__x));
                                           });
 }
 
@@ -102,12 +97,8 @@ __brick_uninitialized_copy(_ForwardIterator __first, _ForwardIterator __last, _O
 {
     using _ValueType = typename ::std::iterator_traits<_OutputIterator>::value_type;
     for (; __first != __last; ++__first, ++__result)
-    {
-        if constexpr (std::is_trivial_v<_ValueType>)
-            *__result = *__first;
-        else
-            ::new (std::addressof(*__result)) _ValueType(*__first);
-    }
+        oneapi::dpl::__utils::__op_smart_assign{}(*__result, *__first);
+
     return __result;
 }
 
@@ -121,12 +112,7 @@ __brick_uninitialized_copy(_RandomAccessIterator __first, _RandomAccessIterator 
     using _ReferenceType2 = typename ::std::iterator_traits<_OutputIterator>::reference;
 
     return __unseq_backend::__simd_walk_2(__first, __last - __first, __result,
-                                          [](_ReferenceType1 __x, _ReferenceType2 __y) {
-                                              if constexpr (std::is_trivial_v<__ValueType>)
-                                                  __y = __x;
-                                              else
-                                                  ::new (std::addressof(__y)) __ValueType(__x);
-                                          });
+        [](_ReferenceType1 __x, _ReferenceType2 __y) { oneapi::dpl::__utils::__op_smart_assign{}(__y, __x); });
 }
 
 template <typename _ExecutionPolicy>
@@ -136,11 +122,7 @@ struct __op_uninitialized_copy<_ExecutionPolicy>
     void
     operator()(_SourceT&& __source, _TargetT& __target) const
     {
-        using _TargetValueType = std::decay_t<_TargetT>;
-        if constexpr (std::is_trivially_constructible_v<_TargetValueType>)
-            __target = std::forward<_SourceT>(__source);
-        else
-            ::new (std::addressof(__target)) _TargetValueType(std::forward<_SourceT>(__source));
+        oneapi::dpl::__utils::__op_smart_assign{}(__target, ::forward<_SourceT>(__source));
     }
 };
 
@@ -155,12 +137,7 @@ struct __op_uninitialized_move<_ExecutionPolicy>
     void
     operator()(_SourceT&& __source, _TargetT& __target) const
     {
-        using _TargetValueType = ::std::decay_t<_TargetT>;
-
-        if constexpr (std::is_trivial_v<_TargetValueType>)
-            __target = std::move(__source);
-        else
-            ::new (std::addressof(__target)) _TargetValueType(std::move(__source));
+        oneapi::dpl::__utils::__op_smart_assign{}(__target, std::move(__source));
     }
 };
 
@@ -177,12 +154,7 @@ struct __op_uninitialized_fill<_SourceT, _ExecutionPolicy>
     void
     operator()(_TargetT& __target) const
     {
-        using _TargetValueType = ::std::decay_t<_TargetT>;
-
-        if constexpr (std::is_trivial_v<_TargetValueType>)
-            __target = __source;
-        else
-            ::new (std::addressof(__target)) _TargetValueType(__source);
+        oneapi::dpl::__utils::__op_smart_assign{}(__target, __source);
     }
 };
 
